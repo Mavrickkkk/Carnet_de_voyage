@@ -15,6 +15,9 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationRequest;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -30,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private MapView map;
     private FusedLocationProviderClient fusedLocationClient;
     private GeoPoint userGeoPoint;
+    private LocationCallback locationCallback;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -44,19 +48,33 @@ public class MainActivity extends AppCompatActivity {
         map.setTileSource(TileSourceFactory.MAPNIK);
         map.setMultiTouchControls(true);
 
-        // Initialisation du client de localisation
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
-        // Demande les permissions nécessaires
         requestPermissionsIfNecessary(new String[] {
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
         });
 
-        // Si la permission est déjà donnée, afficher la localisation
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             displayUserLocation();
+            LocationRequest locationRequest = LocationRequest.create();
+            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+            locationRequest.setInterval(2000);
+            locationRequest.setFastestInterval(2000);
+
+            locationCallback = new LocationCallback() {
+                @Override
+                public void onLocationResult(LocationResult locationResult) {
+                    if (locationResult == null) return;
+                    Location location = locationResult.getLastLocation();
+                    if (location != null) {
+                        String message = "Lat: " + location.getLatitude() + ", Lon: " + location.getLongitude();
+                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
+                    }
+                }
+            };
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
         }
     }
     private void displayUserLocation() {
@@ -69,7 +87,7 @@ public class MainActivity extends AppCompatActivity {
                             map.getController().setZoom(16.0);
                             map.getController().setCenter(userGeoPoint);
 
-                            map.getOverlays().clear(); // Évite les doublons
+                            map.getOverlays().clear();
                             Marker marker = new Marker(map);
                             marker.setPosition(userGeoPoint);
                             marker.setTitle("Ma position");
