@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "918527857947",
+    "project_id": "carnetde-a66bd",
+    "storage_bucket": "carnetde-a66bd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:918527857947:android:a3d1d28a3586ffca146fbe",
+        "android_client_info": {
+          "package_name": "com.example.asi_mobile_toz_gouix"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdKtRQqI8OOY-EW7rlWaK58PFsMh5ue2M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

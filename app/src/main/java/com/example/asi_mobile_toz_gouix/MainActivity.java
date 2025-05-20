@@ -5,19 +5,28 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.preference.PreferenceManager;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.Priority;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -25,7 +34,9 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
+import java.sql.Time;
 import java.util.ArrayList;
+import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -34,6 +45,8 @@ public class MainActivity extends AppCompatActivity {
     private FusedLocationProviderClient fusedLocationClient;
     private GeoPoint userGeoPoint;
     private LocationCallback locationCallback;
+    private long time;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -43,10 +56,35 @@ public class MainActivity extends AppCompatActivity {
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
 
         setContentView(R.layout.activity_main);
+        BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
+
+        Fragment firstFragment = new FirstFragment();
+        Fragment secondFragment = new secondFragment();
+        Fragment thirdFragment = new ThirdFragment();
+        setCurrentFragment(firstFragment);
+
+        bottomNavigationView.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+
+            if (id == R.id.home) {
+                setCurrentFragment(firstFragment);
+                return true;
+            } else if (id == R.id.profile) {
+                setCurrentFragment(secondFragment);
+                return true;
+            } else if (id == R.id.settings) {
+                setCurrentFragment(thirdFragment);
+                return true;
+            }
+
+            return false;
+        });
 
         map = findViewById(R.id.map);
         map.setTileSource(TileSourceFactory.MAPNIK);
         map.setMultiTouchControls(true);
+
+
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
@@ -55,28 +93,33 @@ public class MainActivity extends AppCompatActivity {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
         });
 
+        this.db = FirebaseFirestore.getInstance();
+        Toast.makeText(this,"Initalisé" + Objects.nonNull(this.db), Toast.LENGTH_SHORT).show();
+
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             displayUserLocation();
-            LocationRequest locationRequest = LocationRequest.create();
-            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-            locationRequest.setInterval(2000);
-            locationRequest.setFastestInterval(2000);
 
-            locationCallback = new LocationCallback() {
+
+
+            locationCallback = new LocationCallback(){
                 @Override
                 public void onLocationResult(LocationResult locationResult) {
                     if (locationResult == null) return;
                     Location location = locationResult.getLastLocation();
+
                     if (location != null) {
+                        Object parcelable = (Parcelable) location;
+                        db.collection("CarnetDeVoyage").add(parcelable);
                         String message = "Lat: " + location.getLatitude() + ", Lon: " + location.getLongitude();
                         Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
                     }
                 }
             };
-            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
         }
     }
+
     private void displayUserLocation() {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
@@ -143,5 +186,44 @@ public class MainActivity extends AppCompatActivity {
                     permissionsToRequest.toArray(new String[0]),
                     REQUEST_PERMISSIONS_REQUEST_CODE);
         }
+    }
+
+    public void onClickDemarrer(View view) {
+        time = 10000; // a modifier plus tard
+
+
+        LocationRequest locationRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                time// priorité
+                 // intervalle en millisecondes
+        )
+                .setMinUpdateIntervalMillis(2000) // équivalent de setFastestInterval
+                .build();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        Button Btn_Demarrer = findViewById(R.id.Btn_Demarrer);
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null).addOnCompleteListener(l ->{
+            if(l.isSuccessful())
+                Btn_Demarrer.setText("Arrêter");
+            else
+                Btn_Demarrer.setText("Démarrer");
+        });
+
+
+
+    }
+    private void setCurrentFragment(Fragment fragment) {
+        getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.flFragment, fragment)
+                .commit();
     }
 }
