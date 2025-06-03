@@ -11,6 +11,8 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.provider.Settings;
+import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -85,7 +87,6 @@ public class MainActivity extends AppCompatActivity {
         map.setMultiTouchControls(true);
 
 
-
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         requestPermissionsIfNecessary(new String[] {
@@ -93,6 +94,7 @@ public class MainActivity extends AppCompatActivity {
                 Manifest.permission.WRITE_EXTERNAL_STORAGE
         });
 
+        String deviceId = MainActivity.getDeviceId(this);
         this.db = FirebaseFirestore.getInstance();
         Toast.makeText(this,"Initalisé" + Objects.nonNull(this.db), Toast.LENGTH_SHORT).show();
 
@@ -111,13 +113,19 @@ public class MainActivity extends AppCompatActivity {
 
                     if (location != null) {
                         Object parcelable = (Parcelable) location;
-                        db.collection("CarnetDeVoyage").add(parcelable);
+                        db.collection(deviceId).add(parcelable);
                         String message = "Lat: " + location.getLatitude() + ", Lon: " + location.getLongitude();
                         Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
                     }
                 }
             };
         }
+    }
+
+    public static String getDeviceId(Context context) {
+        String id = Settings.Secure.getString(context.getContentResolver(),
+                Settings.Secure.ANDROID_ID);
+        return id;
     }
 
     private void displayUserLocation() {
@@ -197,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
                 time// priorité
                  // intervalle en millisecondes
         )
-                .setMinUpdateIntervalMillis(2000) // équivalent de setFastestInterval
+                .setMinUpdateIntervalMillis(time) // équivalent de setFastestInterval
                 .build();
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // TODO: Consider calling
@@ -210,20 +218,23 @@ public class MainActivity extends AppCompatActivity {
             return;
         }
         Button Btn_Demarrer = findViewById(R.id.Btn_Demarrer);
-        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null).addOnCompleteListener(l ->{
-            if(l.isSuccessful())
-                Btn_Demarrer.setText("Arrêter");
-            else
-                Btn_Demarrer.setText("Démarrer");
-        });
+        boolean isRunning = Btn_Demarrer.getText().toString().equals("Arrêter");
 
-
-
+        if (isRunning) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            Btn_Demarrer.setText("Démarrer");
+        }
+        else {
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null).addOnCompleteListener(l ->{
+                if(l.isSuccessful())
+                    Btn_Demarrer.setText("Arrêter");
+            });
+        }
     }
+
     private void setCurrentFragment(Fragment fragment) {
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.flFragment, fragment)
                 .commit();
     }
 }
