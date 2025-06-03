@@ -37,7 +37,7 @@ android {
 }
 
 dependencies {
-    implementation("com.google.android.material:material:1.12.0")
+    implementation(libs.material)
     implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation(libs.osmdroid.osmdroid.android)
