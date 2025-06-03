@@ -155,13 +155,16 @@ public class FirstFragment extends Fragment {
         boolean isRunning = Btn_Demarrer.getText().toString().equals("Arrêter");
 
         if (isRunning) {
-            fusedLocationClient.removeLocationUpdates(locationCallback);
+            fusedLocationClient.removeLocationUpdates(MainActivity.getLocationCallback());
             Btn_Demarrer.setText("Démarrer");
         }
         else {
-            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null).addOnCompleteListener(l ->{
+            fusedLocationClient.requestLocationUpdates(locationRequest, MainActivity.getLocationCallback(), null).addOnCompleteListener(l ->{
                 if(l.isSuccessful())
                     Btn_Demarrer.setText("Arrêter");
+                else{
+                    MainActivity.setRunning(false);
+                }
             });
         }
     }

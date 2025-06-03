@@ -1,14 +1,10 @@
 package com.example.asi_mobile_toz_gouix;
 
-import static java.security.AccessController.getContext;
-
-import android.content.ContentResolver;
 import android.content.Context;
 import android.location.Location;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
-import android.widget.Toast;
 // import android.location.Location; // plus utilisé ici
 // import android.os.Parcelable;
 
@@ -31,8 +27,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 // import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.osmdroid.config.Configuration;
-import org.osmdroid.util.GeoPoint;
-import org.osmdroid.views.overlay.Marker;
 // import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 // import org.osmdroid.util.GeoPoint;
 // import org.osmdroid.views.MapView;
@@ -40,11 +34,12 @@ import org.osmdroid.views.overlay.Marker;
 
 
 public class MainActivity extends AppCompatActivity {
-    private LocationCallback locationCallback;
+    private static LocationCallback locationCallback;
 
     private static FirebaseFirestore db;
 
     private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
+    private static boolean isRunning;
 
     // La carte est maintenant dans le FirstFragment
     // private MapView map;
@@ -73,32 +68,32 @@ public class MainActivity extends AppCompatActivity {
         setCurrentFragment(firstFragment);
 
         bottomNavigationView.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
+                    int id = item.getItemId();
 
-            if (id == R.id.home) {
-                setCurrentFragment(firstFragment);
-                return true;
-            } else if (id == R.id.profile) {
-                setCurrentFragment(secondFragment);
-                return true;
-            } else if (id == R.id.settings) {
-                setCurrentFragment(thirdFragment);
-                return true;
-            }
+                    if (id == R.id.home) {
+                        setCurrentFragment(firstFragment);
+                        return true;
+                    } else if (id == R.id.profile) {
+                        setCurrentFragment(secondFragment);
+                        return true;
+                    } else if (id == R.id.settings) {
+                        setCurrentFragment(thirdFragment);
+                        return true;
+                    }
 
-            return false;
-        }
-    );
+                    return false;
+                }
+        );
 
-          /*  // Callback pour mise à jour en direct
-            locationCallback = new LocationCallback() {
-                @Override
-                public void onLocationResult(@NonNull LocationResult locationResult) {
-                    if (locationResult == null) return;
+        // Callback pour mise à jour en direct
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                if (locationResult == null) return;
 
-                    Location location = locationResult.getLastLocation();
-                    if (location != null) {
-                        // Affichage sur carte
+                Location location = locationResult.getLastLocation();
+                if (location != null) {
+                    // Affichage sur carte
 //                        GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
 //                        mapView.getOverlays().clear();
 //                        Marker marker = new Marker(mapView);
@@ -107,19 +102,21 @@ public class MainActivity extends AppCompatActivity {
 //                        mapView.getOverlays().add(marker);
 //                        mapView.getController().setCenter(point);
 
-                        // Envoi Firestore
-                        db.collection(
-
-                                Settings.Secure.getString(getContentResolver(),
-                                        Settings.Secure.ANDROID_ID)).add(location);
+                    // Envoi Firestore
+                    isRunning=true;
+                    db.collection(
+                            Settings.Secure.getString(getContentResolver(),
+                                    Settings.Secure.ANDROID_ID)).add(location);
 //                                .addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
 //                                        "Position enregistrée", Toast.LENGTH_SHORT).show())
 //                                .addOnFailureListener(e -> Toast.makeText(this,
 //                                        "Erreur Firestore", Toast.LENGTH_SHORT).show());
 
                 }
-            };
-        };*/
+            }
+
+            ;
+        };
 
         // La carte est maintenant gérée dans FirstFragment
         // map = findViewById(R.id.map);
@@ -228,11 +225,26 @@ public class MainActivity extends AppCompatActivity {
     // Plus utilisé dans cette classe
     // public void onClickDemarrer(View view) { ... }
 
+    private boolean getRunning(){
+        return isRunning;
+    }
+
+    static void setRunning(boolean newIsRunning){
+        isRunning = newIsRunning;
+    }
+
     private void setCurrentFragment(Fragment fragment) {
         getSupportFragmentManager()
                 .beginTransaction()
                 .replace(R.id.flFragment, fragment)
                 .commit();
     }
-    public static FirebaseFirestore getDb(){return db;}
+
+    public static LocationCallback getLocationCallback() {
+        return locationCallback;
+    }
+
+    public static FirebaseFirestore getDb() {
+        return db;
+    }
 }
