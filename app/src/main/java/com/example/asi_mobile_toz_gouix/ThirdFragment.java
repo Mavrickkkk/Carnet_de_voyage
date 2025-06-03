@@ -40,9 +40,8 @@ public class ThirdFragment extends Fragment {
 
             }
         });
-
-
         return view;
+
     }
 
     }

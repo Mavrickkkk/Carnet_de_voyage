@@ -1,13 +1,16 @@
 package com.example.asi_mobile_toz_gouix;
 
-import android.Manifest;
+import static java.security.AccessController.getContext;
+
+import android.content.ContentResolver;
 import android.content.Context;
-import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
+import android.widget.Toast;
 // import android.location.Location; // plus utilisé ici
 // import android.os.Parcelable;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -15,7 +18,10 @@ import androidx.appcompat.app.AppCompatActivity;
 // import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.firestore.FirebaseFirestore;
 // import com.google.android.gms.location.FusedLocationProviderClient;
 // import com.google.android.gms.location.LocationServices;
 // import com.google.android.gms.location.LocationCallback;
@@ -25,15 +31,18 @@ import com.google.android.material.bottomnavigation.BottomNavigationView;
 // import com.google.firebase.firestore.FirebaseFirestore;
 
 import org.osmdroid.config.Configuration;
+import org.osmdroid.util.GeoPoint;
+import org.osmdroid.views.overlay.Marker;
 // import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
 // import org.osmdroid.util.GeoPoint;
 // import org.osmdroid.views.MapView;
 // import org.osmdroid.views.overlay.Marker;
 
-import java.util.ArrayList;
-import java.util.Objects;
 
 public class MainActivity extends AppCompatActivity {
+    private LocationCallback locationCallback;
+
+    private static FirebaseFirestore db;
 
     private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
 
@@ -56,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
 
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottomNavigationView);
+        db = FirebaseFirestore.getInstance();
 
         Fragment firstFragment = new FirstFragment();
         Fragment secondFragment = new secondFragment();
@@ -77,7 +87,39 @@ public class MainActivity extends AppCompatActivity {
             }
 
             return false;
-        });
+        }
+    );
+
+            // Callback pour mise à jour en direct
+            locationCallback = new LocationCallback() {
+                @Override
+                public void onLocationResult(@NonNull LocationResult locationResult) {
+                    if (locationResult == null) return;
+
+                    Location location = locationResult.getLastLocation();
+                    if (location != null) {
+                        // Affichage sur carte
+//                        GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
+//                        mapView.getOverlays().clear();
+//                        Marker marker = new Marker(mapView);
+//                        marker.setPosition(point);
+//                        marker.setTitle("Ma position");
+//                        mapView.getOverlays().add(marker);
+//                        mapView.getController().setCenter(point);
+
+                        // Envoi Firestore
+                        db.collection(
+
+                                Settings.Secure.getString(getContentResolver(),
+                                        Settings.Secure.ANDROID_ID)).add(location);
+//                                .addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
+//                                        "Position enregistrée", Toast.LENGTH_SHORT).show())
+//                                .addOnFailureListener(e -> Toast.makeText(this,
+//                                        "Erreur Firestore", Toast.LENGTH_SHORT).show());
+
+                }
+            };
+        };
 
         // La carte est maintenant gérée dans FirstFragment
         // map = findViewById(R.id.map);
@@ -192,4 +234,5 @@ public class MainActivity extends AppCompatActivity {
                 .replace(R.id.flFragment, fragment)
                 .commit();
     }
+    public static FirebaseFirestore getDb(){return db;}
 }

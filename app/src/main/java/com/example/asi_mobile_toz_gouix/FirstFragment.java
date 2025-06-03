@@ -6,6 +6,8 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,7 +39,6 @@ public class FirstFragment extends Fragment {
     private MapView mapView;
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
-    private FirebaseFirestore db;
     private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1001;
     private boolean isTracking = false;
     private Button btnDemarrer;
@@ -63,12 +64,11 @@ public class FirstFragment extends Fragment {
         mapView.setMultiTouchControls(true);
 
         // Initialisation Firestore et Location
-        db = FirebaseFirestore.getInstance();
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity());
 
         // Bouton
         btnDemarrer = view.findViewById(R.id.Btn_Demarrer);
-        btnDemarrer.setOnClickListener(v -> onClickDemarrer());
+        btnDemarrer.setOnClickListener(v -> onClickDemarrer(view));
 
         // Callback pour mise à jour en direct
         locationCallback = new LocationCallback() {
@@ -88,7 +88,8 @@ public class FirstFragment extends Fragment {
                     mapView.getController().setCenter(point);
 
                     // Envoi Firestore
-                    db.collection("CarnetDeVoyage").add(location)
+                    MainActivity.getDb().collection(Settings.Secure.getString(context.getContentResolver(),
+                            Settings.Secure.ANDROID_ID)).add(location)
                             .addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
                                     "Position enregistrée", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(e -> Toast.makeText(getContext(),
@@ -123,13 +124,48 @@ public class FirstFragment extends Fragment {
                             marker.setTitle("Ma position");
                             mapView.getOverlays().add(marker);
                         } else {
-                            Toast.makeText(getContext(), "Position non trouvée", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this.getContext(), "Position non trouvée", Toast.LENGTH_SHORT).show();
                         }
                     });
         }
     }
 
-    private void onClickDemarrer() {
+    public void onClickDemarrer(View view) {
+        time = 10000; // a modifier plus tard
+
+
+        LocationRequest locationRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                (long) time// priorité
+                // intervalle en millisecondes
+        )
+                .setMinUpdateIntervalMillis((long) time) // équivalent de setFastestInterval
+                .build();
+        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            // TODO: Consider calling
+            //    ActivityCompat#requestPermissions
+            // here to request the missing permissions, and then overriding
+            //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+            //                                          int[] grantResults)
+            // to handle the case where the user grants the permission. See the documentation
+            // for ActivityCompat#requestPermissions for more details.
+            return;
+        }
+        Button Btn_Demarrer = view.findViewById(R.id.Btn_Demarrer);
+        boolean isRunning = Btn_Demarrer.getText().toString().equals("Arrêter");
+
+        if (isRunning) {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            Btn_Demarrer.setText("Démarrer");
+        }
+        else {
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null).addOnCompleteListener(l ->{
+                if(l.isSuccessful())
+                    Btn_Demarrer.setText("Arrêter");
+            });
+        }
+    }
+   /* private void onClickDemarrer() {
         if (!isTracking) {
             LocationRequest locationRequest = new LocationRequest.Builder(
                     Priority.PRIORITY_HIGH_ACCURACY, (long) time)
@@ -151,7 +187,7 @@ public class FirstFragment extends Fragment {
             btnDemarrer.setText("Démarrer");
             isTracking = false;
         }
-    }
+    }*/
 
     @Override
     public void onResume() {
