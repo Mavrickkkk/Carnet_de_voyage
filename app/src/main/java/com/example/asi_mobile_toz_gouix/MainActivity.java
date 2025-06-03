@@ -90,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
         }
     );
 
-            // Callback pour mise à jour en direct
+          /*  // Callback pour mise à jour en direct
             locationCallback = new LocationCallback() {
                 @Override
                 public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
 
                 }
             };
-        };
+        };*/
 
         // La carte est maintenant gérée dans FirstFragment
         // map = findViewById(R.id.map);

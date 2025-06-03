@@ -2,6 +2,8 @@ package com.example.asi_mobile_toz_gouix;
 
 //import static com.example.asi_mobile_toz_gouix.MainActivity.setTime;
 
+import static com.example.asi_mobile_toz_gouix.FirstFragment.setTime;
+
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,10 +26,12 @@ public class ThirdFragment extends Fragment {
 
         // Récupère le slider depuis la vue
         SeekBar seekBar =(SeekBar) view.findViewById(R.id.SliderTime);
+        seekBar.setMax(20000);
+        seekBar.setMin(100);
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-              //  setTime((float) progress);
+            FirstFragment.setTime(progress);
             }
 
             @Override

@@ -74,10 +74,10 @@ public class FirstFragment extends Fragment {
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
-                if (locationResult == null) return;
+                if (locationResult == null ) return;
 
                 Location location = locationResult.getLastLocation();
-                if (location != null) {
+                if (location != null && isAdded()) {
                     // Affichage sur carte
                     GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
                     mapView.getOverlays().clear();
@@ -89,11 +89,11 @@ public class FirstFragment extends Fragment {
 
                     // Envoi Firestore
                     MainActivity.getDb().collection(Settings.Secure.getString(context.getContentResolver(),
-                            Settings.Secure.ANDROID_ID)).add(location)
-                            .addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
+                            Settings.Secure.ANDROID_ID)).add(location);
+                            /*.addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
                                     "Position enregistrée", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(e -> Toast.makeText(getContext(),
-                                    "Erreur Firestore", Toast.LENGTH_SHORT).show());
+                                    "Erreur Firestore", Toast.LENGTH_SHORT).show());*/
                 }
             }
         };
@@ -217,4 +217,5 @@ public class FirstFragment extends Fragment {
             }
         }
     }
+    public static void setTime(long timeNew){time = (long)timeNew;}
 }
