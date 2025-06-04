@@ -34,8 +34,12 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
 import org.osmdroid.views.overlay.Marker;
 
-public class FirstFragment extends Fragment {
+import java.util.HashMap;
+import java.util.UUID;
 
+public class FirstFragment extends Fragment {
+    private UUID uuid;
+    private HashMap<String, Object> locationData;
     private MapView mapView;
     private FusedLocationProviderClient fusedLocationClient;
     private LocationCallback locationCallback;
@@ -78,6 +82,7 @@ public class FirstFragment extends Fragment {
 
                 Location location = locationResult.getLastLocation();
                 if (location != null && isAdded()) {
+                    locationData.put(uuid.toString(), location);
                     // Affichage sur carte
                     GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
                     mapView.getOverlays().clear();
@@ -89,7 +94,7 @@ public class FirstFragment extends Fragment {
 
                     // Envoi Firestore
                     MainActivity.getDb().collection(Settings.Secure.getString(context.getContentResolver(),
-                            Settings.Secure.ANDROID_ID)).add(location);
+                            Settings.Secure.ANDROID_ID)).add(locationData);
                             /*.addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
                                     "Position enregistrée", Toast.LENGTH_SHORT).show())
                             .addOnFailureListener(e -> Toast.makeText(getContext(),
@@ -132,8 +137,10 @@ public class FirstFragment extends Fragment {
 
     public void onClickDemarrer(View view) {
         time = 10000; // a modifier plus tard
-
-
+        uuid = UUID.randomUUID();
+        locationData = new HashMap<>();
+        locationData.put(uuid.toString(),0);
+        Log.d("UUID", uuid.toString());
         LocationRequest locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
                 (long) time// priorité
@@ -156,6 +163,7 @@ public class FirstFragment extends Fragment {
 
         if (isRunning) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
+            uuid = UUID.randomUUID();
             Btn_Demarrer.setText("Démarrer");
         }
         else {
