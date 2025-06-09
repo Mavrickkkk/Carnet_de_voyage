@@ -164,12 +164,16 @@ public class FirstFragment extends Fragment {
         if (isRunning) {
             fusedLocationClient.removeLocationUpdates(locationCallback);
             uuid = UUID.randomUUID();
+
             Btn_Demarrer.setText("Démarrer");
         }
         else {
-            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null).addOnCompleteListener(l ->{
+            fusedLocationClient.requestLocationUpdates(locationRequest, MainActivity.getLocationCallback(), null).addOnCompleteListener(l ->{
                 if(l.isSuccessful())
                     Btn_Demarrer.setText("Arrêter");
+                else{
+                    MainActivity.setRunning(false);
+                }
             });
         }
     }
