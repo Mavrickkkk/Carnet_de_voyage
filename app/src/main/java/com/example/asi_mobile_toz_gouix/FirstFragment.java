@@ -79,7 +79,7 @@ public class FirstFragment extends Fragment {
 
         // Bouton
         btnDemarrer = view.findViewById(R.id.Btn_Demarrer);
-        btnDemarrer.setOnClickListener(v -> onClickDemarrer(view));
+        btnDemarrer.setOnClickListener(v -> toggleTracking());
 
 
         // Permissions
@@ -112,6 +112,18 @@ public class FirstFragment extends Fragment {
                         }
                     });
         }
+    }
+
+    private void toggleTracking() {
+        MainActivity activity = (MainActivity) requireActivity();
+        if (isTracking) {
+            activity.stopTracking();
+            btnDemarrer.setText("Démarrer");
+        } else {
+            activity.startTracking();
+            btnDemarrer.setText("Arrêter");
+        }
+        isTracking = !isTracking;
     }
 
     public void onClickDemarrer(View view) {
@@ -164,9 +176,7 @@ public class FirstFragment extends Fragment {
         super.onPause();
         mapView.onPause();
         if (isTracking) {
-            fusedLocationClient.removeLocationUpdates(MainActivity.getLocationCallback());
-            btnDemarrer.setText("Démarrer");
-            isTracking = false;
+            toggleTracking();
         }
     }
 

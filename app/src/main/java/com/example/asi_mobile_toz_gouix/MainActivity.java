@@ -1,19 +1,29 @@
 package com.example.asi_mobile_toz_gouix;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
+import android.util.Log;
 
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -36,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static FirebaseFirestore db;
 
-   // private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
+    // private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
     private static boolean isRunning;
 
 
@@ -79,28 +89,54 @@ public class MainActivity extends AppCompatActivity {
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
-
                 if (locationResult == null) return;
-
                 Location location = locationResult.getLastLocation();
                 if (location != null) {
-                    locations.add(location);
-                    locationData.put(FirstFragment.getUuid().toString(), location);
-
-
-                    // Envoi Firestore
-                    isRunning=true;
-                    db.collection(
-                            Settings.Secure.getString(getContentResolver(),
-                                    Settings.Secure.ANDROID_ID)).add(locationData);
-
-
+                    saveLocationData(location);
                 }
             }
-
-            ;
         };
 
+    }
+
+    public void startTracking() {
+        long time = 10000;
+
+        LocationRequest locationRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                (long) time// priorité
+                // intervalle en millisecondes
+        ).build();
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("MainActivity", "Permission non accordée pour la localisation");
+            return;
+        }
+
+        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("MainActivity", "Suivi de localisation démarré");
+                        isRunning = true;
+                    } else {
+                        Log.e("MainActivity", "Échec du démarrage du suivi");
+                        isRunning = false;
+                    }
+                });
+    }
+
+    public void stopTracking() {
+        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        fusedLocationClient.removeLocationUpdates(locationCallback);
+        isRunning = false;
+    }
+
+    private void saveLocationData(Location location) {
+        String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        db.collection(deviceId).add(location);
     }
 
     @Override
