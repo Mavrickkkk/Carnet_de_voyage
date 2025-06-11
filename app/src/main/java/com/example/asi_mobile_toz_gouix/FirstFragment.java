@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.preference.PreferenceManager;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -38,9 +39,11 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.UUID;
 
 public class FirstFragment extends Fragment {
+    private Marker marker;
     private Button btnExportGpx;
     private EditText emailField;
     private static UUID uuid;
@@ -56,6 +59,18 @@ public class FirstFragment extends Fragment {
         time = timeGiven;
     }
 
+    /**
+     * Fonction qui sert à initialiser le fragment.
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment,
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.  The fragment should not add the view itself,
+     * but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     *
+     * @return
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -80,7 +95,10 @@ public class FirstFragment extends Fragment {
         // Bouton
         btnDemarrer = view.findViewById(R.id.Btn_Demarrer);
         btnDemarrer.setOnClickListener(v -> toggleTracking());
+        btnDemarrer.setOnClickListener(v -> onClickDemarrer(view));
 
+        //Marker de l'utilisateur qui va se déplacer
+        marker = new Marker(this.mapView);
 
         // Permissions
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -93,25 +111,32 @@ public class FirstFragment extends Fragment {
         return view;
     }
 
-    private void displayUserLocation() {
-        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-                == PackageManager.PERMISSION_GRANTED) {
-            fusedLocationClient.getLastLocation()
-                    .addOnSuccessListener(location -> {
-                        if (location != null) {
-                            GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
-                            mapView.getController().setZoom(16.0);
-                            mapView.getController().setCenter(point);
+    /**
+     *
+     * @param view The View returned by {@link #onCreateView(LayoutInflater, ViewGroup, Bundle)}.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     */
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        //Mise a jour de la carte
+        Handler monHandler = new Handler();
+        Runnable monRunnable = new Runnable() {
+            @Override
+            public void run() {
+                monHandler.postDelayed(this, 1000);
+                showPosition(false);
+            }
+        };
+        monHandler.post(monRunnable);
+    }
 
-                            Marker marker = new Marker(mapView);
-                            marker.setPosition(point);
-                            marker.setTitle("Ma position");
-                            mapView.getOverlays().add(marker);
-                        } else {
-                            Toast.makeText(this.getContext(), "Position non trouvée", Toast.LENGTH_SHORT).show();
-                        }
-                    });
-        }
+    /**
+     * Fonction qui sert à afficher la position de l'utilisateur sur la carte, la première fois quand la carte se charge.
+     */
+    private void displayUserLocation() {
+            showPosition(true);
     }
 
     private void toggleTracking() {
@@ -126,6 +151,10 @@ public class FirstFragment extends Fragment {
         isTracking = !isTracking;
     }
 
+    /**
+     * Fonction qui sert à démarrer le suivi de localisation.
+     * @param view vue du fragment
+     */
     public void onClickDemarrer(View view) {
         time = 10000; // a modifier plus tard
 
@@ -165,12 +194,18 @@ public class FirstFragment extends Fragment {
         }
     }
 
+    /**
+     * Fonction qui sert à reprendre la carte
+     */
     @Override
     public void onResume() {
         super.onResume();
         mapView.onResume();
     }
 
+    /**
+     * Fonction qui sert à mettre en pause la carte
+     */
     @Override
     public void onPause() {
         super.onPause();
@@ -191,8 +226,16 @@ public class FirstFragment extends Fragment {
             }
         }
     }
+
+    /**
+     * Fonction qui sert à modifier la durée du suivi de localisation en millisecondes (voir ThirdFragment)
+     * @param timeNew
+     */
     public static void setTime(long timeNew){time = (long)timeNew;}
 
+    /**
+     * Fonction qui sert à exporter le fichier GPX et l'envoyer par mail
+     */
     private void exporterEtEnvoyerGPX() {
         if (MainActivity.locationData == null || MainActivity.locationData.isEmpty()) {
             Toast.makeText(getContext(), "Aucun trajet à exporter", Toast.LENGTH_SHORT).show();
@@ -245,4 +288,34 @@ public class FirstFragment extends Fragment {
 
     public static UUID getUuid(){return uuid;}
 
+    /**
+     * Fonction qui sert a visualiser la position de l'utilisateur sur la carte.
+     * @param first la seul fois ou il faut centré la carte au premier affichage
+     */
+    public void showPosition(boolean first){
+        if(!isAdded()) return;
+        if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            fusedLocationClient.getLastLocation()
+                    .addOnSuccessListener(location -> {
+                        if (location != null) {
+                            GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
+                            if (first) {
+                                this.mapView.getController().setZoom(16.0);
+                                this.mapView.getController().setCenter(point);
+                                marker.setPosition(point);
+                                marker.setTitle("Ma position");
+                                this.mapView.getOverlays().add(marker);
+                            }
+                            else {
+                                marker.setPosition(point);
+                                marker.setTitle("Ma position");
+                                this.mapView.getOverlays().add(marker);
+                            }
+                        } else {
+                            Toast.makeText(this.getContext(), "Position non trouvée", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+        }
+    }
 }

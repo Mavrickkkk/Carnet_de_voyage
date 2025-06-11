@@ -40,9 +40,10 @@
             android:layout_height="wrap_content"
             android:layout_marginEnd="16dp"
             android:backgroundTint="@color/black"
+            android:onClick="onClickDemarrer"
+            android:padding="12dp"
             android:text="Démarrer"
-            android:textColor="@android:color/white"
-            android:padding="12dp" />
+            android:textColor="@android:color/white" />
 
         <!-- Bouton Exporter -->
         <Button
