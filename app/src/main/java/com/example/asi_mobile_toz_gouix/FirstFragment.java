@@ -72,7 +72,36 @@ public class FirstFragment extends Fragment {
 
         // Bouton
         btnDemarrer = view.findViewById(R.id.Btn_Demarrer);
-        btnDemarrer.setOnClickListener(v -> toggleTracking());
+        btnDemarrer.setOnClickListener(v -> onClickDemarrer(view));
+
+        // Callback pour mise à jour en direct
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                if (locationResult == null ) return;
+
+                Location location = locationResult.getLastLocation();
+                if (location != null && isAdded()) {
+                    locationData.put(uuid.toString(), location);
+                    // Affichage sur carte
+                    GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
+                    mapView.getOverlays().clear();
+                    Marker marker = new Marker(mapView);
+                    marker.setPosition(point);
+                    marker.setTitle("Ma position");
+                    mapView.getOverlays().add(marker);
+                    mapView.getController().setCenter(point);
+
+                    // Envoi Firestore
+                    MainActivity.getDb().collection(Settings.Secure.getString(context.getContentResolver(),
+                            Settings.Secure.ANDROID_ID)).add(locationData);
+                            /*.addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
+                                    "Position enregistrée", Toast.LENGTH_SHORT).show())
+                            .addOnFailureListener(e -> Toast.makeText(getContext(),
+                                    "Erreur Firestore", Toast.LENGTH_SHORT).show());*/
+                }
+            }
+        };
 
         // Permissions
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -104,18 +133,6 @@ public class FirstFragment extends Fragment {
                         }
                     });
         }
-    }
-
-    private void toggleTracking() {
-        MainActivity activity = (MainActivity) requireActivity();
-        if (isTracking) {
-            activity.stopTracking();
-            btnDemarrer.setText("Démarrer");
-        } else {
-            activity.startTracking();
-            btnDemarrer.setText("Arrêter");
-        }
-        isTracking = !isTracking;
     }
 
     public void onClickDemarrer(View view) {
@@ -160,6 +177,29 @@ public class FirstFragment extends Fragment {
             });
         }
     }
+   /* private void onClickDemarrer() {
+        if (!isTracking) {
+            LocationRequest locationRequest = new LocationRequest.Builder(
+                    Priority.PRIORITY_HIGH_ACCURACY, (long) time)
+                    .setMinUpdateIntervalMillis(2000)
+                    .build();
+
+            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                Toast.makeText(getContext(), "Permission manquante", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, null);
+            btnDemarrer.setText("Arrêter");
+            isTracking = true;
+
+        } else {
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            btnDemarrer.setText("Démarrer");
+            isTracking = false;
+        }
+    }*/
 
     @Override
     public void onResume() {
@@ -172,7 +212,9 @@ public class FirstFragment extends Fragment {
         super.onPause();
         mapView.onPause();
         if (isTracking) {
-            toggleTracking();
+            fusedLocationClient.removeLocationUpdates(locationCallback);
+            btnDemarrer.setText("Démarrer");
+            isTracking = false;
         }
     }
 
