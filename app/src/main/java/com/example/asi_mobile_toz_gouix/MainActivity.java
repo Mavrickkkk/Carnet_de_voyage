@@ -104,19 +104,15 @@ public class MainActivity extends AppCompatActivity {
 
                     // Envoi Firestore
                     isRunning=true;
-                    db.collection(
-                            Settings.Secure.getString(getContentResolver(),
-                                    Settings.Secure.ANDROID_ID)).add(location);
-//                                .addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
-//                                        "Position enregistrée", Toast.LENGTH_SHORT).show())
-//                                .addOnFailureListener(e -> Toast.makeText(this,
-//                                        "Erreur Firestore", Toast.LENGTH_SHORT).show());
-
+                    saveLocationData(location);
                 }
             }
-
-            ;
+            public void saveLocationData(Location location) {
+                String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+                db.collection(deviceId).add(location);
+            }
         };
+
 
         // La carte est maintenant gérée dans FirstFragment
         // map = findViewById(R.id.map);
