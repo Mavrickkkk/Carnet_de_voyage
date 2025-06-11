@@ -1,61 +1,62 @@
 package com.example.asi_mobile_toz_gouix;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Looper;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
-// import android.location.Location; // plus utilisé ici
-// import android.os.Parcelable;
+import android.util.Log;
+
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-// import androidx.core.app.ActivityCompat;
-// import androidx.core.content.ContextCompat;
+
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
-// import com.google.android.gms.location.FusedLocationProviderClient;
-// import com.google.android.gms.location.LocationServices;
-// import com.google.android.gms.location.LocationCallback;
-// import com.google.android.gms.location.LocationResult;
-// import com.google.android.gms.location.LocationRequest;
-// import com.google.android.gms.location.Priority;
-// import com.google.firebase.firestore.FirebaseFirestore;
+
 
 import org.osmdroid.config.Configuration;
-// import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
-// import org.osmdroid.util.GeoPoint;
-// import org.osmdroid.views.MapView;
-// import org.osmdroid.views.overlay.Marker;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
 
 
 public class MainActivity extends AppCompatActivity {
+
+    public static HashMap<String, Object> locationData;
+
+    private static ArrayList<Location> locations;
+
     private static LocationCallback locationCallback;
 
     private static FirebaseFirestore db;
 
-    private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
+    // private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
     private static boolean isRunning;
 
-    // La carte est maintenant dans le FirstFragment
-    // private MapView map;
 
-    // Déplacé dans FirstFragment
-    // private FusedLocationProviderClient fusedLocationClient;
-    // private GeoPoint userGeoPoint;
-    // private LocationCallback locationCallback;
-    // private static float time;
-    // private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
+        locationData = new HashMap<>();
+        locations = new ArrayList<Location>();
         Context ctx = getApplicationContext();
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
 
@@ -84,97 +85,59 @@ public class MainActivity extends AppCompatActivity {
                     return false;
                 }
         );
-
         // Callback pour mise à jour en direct
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
                 if (locationResult == null) return;
-
                 Location location = locationResult.getLastLocation();
                 if (location != null) {
-                    // Affichage sur carte
-//                        GeoPoint point = new GeoPoint(location.getLatitude(), location.getLongitude());
-//                        mapView.getOverlays().clear();
-//                        Marker marker = new Marker(mapView);
-//                        marker.setPosition(point);
-//                        marker.setTitle("Ma position");
-//                        mapView.getOverlays().add(marker);
-//                        mapView.getController().setCenter(point);
-
-                    // Envoi Firestore
-                    isRunning=true;
-                    db.collection(
-                            Settings.Secure.getString(getContentResolver(),
-                                    Settings.Secure.ANDROID_ID)).add(location);
-//                                .addOnSuccessListener(documentReference -> Toast.makeText(getContext(),
-//                                        "Position enregistrée", Toast.LENGTH_SHORT).show())
-//                                .addOnFailureListener(e -> Toast.makeText(this,
-//                                        "Erreur Firestore", Toast.LENGTH_SHORT).show());
-
+                    saveLocationData(location);
                 }
             }
-
-            ;
         };
 
-        // La carte est maintenant gérée dans FirstFragment
-        // map = findViewById(R.id.map);
-        // map.setTileSource(TileSourceFactory.MAPNIK);
-        // map.setMultiTouchControls(true);
-
-        // La localisation et Firestore sont déplacées
-        // fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        // requestPermissionsIfNecessary(new String[] {
-        //         Manifest.permission.ACCESS_FINE_LOCATION,
-        //         Manifest.permission.WRITE_EXTERNAL_STORAGE
-        // });
-
-        // this.db = FirebaseFirestore.getInstance();
-        // Toast.makeText(this, "Initalisé" + Objects.nonNull(this.db), Toast.LENGTH_SHORT).show();
-
-        // if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-        //         == PackageManager.PERMISSION_GRANTED) {
-        //     displayUserLocation();
-
-        //     locationCallback = new LocationCallback(){
-        //         @Override
-        //         public void onLocationResult(LocationResult locationResult) {
-        //             if (locationResult == null) return;
-        //             Location location = locationResult.getLastLocation();
-
-        //             if (location != null) {
-        //                 Object parcelable = (Parcelable) location;
-        //                 db.collection("CarnetDeVoyage").add(parcelable);
-        //                 String message = "Lat: " + location.getLatitude() + ", Lon: " + location.getLongitude();
-        //                 Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-        //             }
-        //         }
-        //     };
-        // }
     }
 
-    // private void displayUserLocation() {
-    //     if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
-    //             == PackageManager.PERMISSION_GRANTED) {
-    //         fusedLocationClient.getLastLocation()
-    //                 .addOnSuccessListener(this, location -> {
-    //                     if (location != null) {
-    //                         userGeoPoint = new GeoPoint(location.getLatitude(), location.getLongitude());
-    //                         map.getController().setZoom(16.0);
-    //                         map.getController().setCenter(userGeoPoint);
+    public void startTracking() {
+        long time = 10000;
 
-    //                         map.getOverlays().clear();
-    //                         Marker marker = new Marker(map);
-    //                         marker.setPosition(userGeoPoint);
-    //                         marker.setTitle("Ma position");
-    //                         map.getOverlays().add(marker);
-    //                     } else {
-    //                         Toast.makeText(this, "Position non trouvée. Activez la localisation GPS.", Toast.LENGTH_SHORT).show();
-    //                     }
-    //                 });
-    //     }
-    // }
+        LocationRequest locationRequest = new LocationRequest.Builder(
+                Priority.PRIORITY_HIGH_ACCURACY,
+                (long) time// priorité
+                // intervalle en millisecondes
+        ).build();
+
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
+                && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            Log.e("MainActivity", "Permission non accordée pour la localisation");
+            return;
+        }
+
+        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+
+        fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+                .addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("MainActivity", "Suivi de localisation démarré");
+                        isRunning = true;
+                    } else {
+                        Log.e("MainActivity", "Échec du démarrage du suivi");
+                        isRunning = false;
+                    }
+                });
+    }
+
+    public void stopTracking() {
+        FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        fusedLocationClient.removeLocationUpdates(locationCallback);
+        isRunning = false;
+    }
+
+    private void saveLocationData(Location location) {
+        String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        db.collection(deviceId).add(location);
+    }
 
     @Override
     public void onResume() {
@@ -193,37 +156,8 @@ public class MainActivity extends AppCompatActivity {
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
-        // Plus nécessaire ici : géré dans le fragment
-        // ArrayList<String> permissionsToRequest = new ArrayList<>();
-        // for (int i = 0; i < grantResults.length; i++) {
-        //     permissionsToRequest.add(permissions[i]);
-        // }
-        // if (permissionsToRequest.toArray().length > 0) {
-        //     ActivityCompat.requestPermissions(
-        //             this,
-        //             permissionsToRequest.toArray(new String[0]),
-        //             REQUEST_PERMISSIONS_REQUEST_CODE);
-        // }
     }
 
-    // private void requestPermissionsIfNecessary(String[] permissions) {
-    //     ArrayList<String> permissionsToRequest = new ArrayList<>();
-    //     for (String permission : permissions) {
-    //         if (ContextCompat.checkSelfPermission(this, permission)
-    //                 != PackageManager.PERMISSION_GRANTED) {
-    //             permissionsToRequest.add(permission);
-    //         }
-    //     }
-    //     if (!permissionsToRequest.isEmpty()) {
-    //         ActivityCompat.requestPermissions(
-    //                 this,
-    //                 permissionsToRequest.toArray(new String[0]),
-    //                 REQUEST_PERMISSIONS_REQUEST_CODE);
-    //     }
-    // }
-
-    // Plus utilisé dans cette classe
-    // public void onClickDemarrer(View view) { ... }
 
     private boolean getRunning(){
         return isRunning;
@@ -247,4 +181,8 @@ public class MainActivity extends AppCompatActivity {
     public static FirebaseFirestore getDb() {
         return db;
     }
+
+    public static List<Location> getLocations(){return locations;}
+
+    public static void setLocations(){locations = null;}
 }
