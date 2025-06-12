@@ -135,8 +135,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void saveLocationData(Location location) {
+        locations.add(location); //Liste servant à l'envoi du fichier gpx par mail
+        locationData.put(FirstFragment.getUuid().toString(), location); //Hashmap servant à remplir la base avec une clé valeur
         String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        db.collection(deviceId).add(location);
+        db.collection(deviceId).add(locationData);
     }
 
     @Override
