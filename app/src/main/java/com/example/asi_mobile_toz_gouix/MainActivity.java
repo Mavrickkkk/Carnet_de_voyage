@@ -33,7 +33,7 @@ import org.osmdroid.config.Configuration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
+import java.util.UUID;
 
 
 public class MainActivity extends AppCompatActivity {
@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
     // private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
     private static boolean isRunning;
+    private static UUID uuid = UUID.randomUUID();
 
 
 
@@ -92,6 +93,7 @@ public class MainActivity extends AppCompatActivity {
                 if (locationResult == null) return;
                 Location location = locationResult.getLastLocation();
                 if (location != null) {
+                    Log.d("LocationCallback", "UUID: " + uuid.toString() + " | Location: " + location.toString());
                     saveLocationData(location);
                 }
             }
@@ -101,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void startTracking() {
         long time = 10000;
+        if (uuid == null) uuid = UUID.randomUUID();
 
         LocationRequest locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
@@ -136,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveLocationData(Location location) {
         locations.add(location); //Liste servant à l'envoi du fichier gpx par mail
-        locationData.put(FirstFragment.getUuid().toString(), location); //Hashmap servant à remplir la base avec une clé valeur
+        locationData.put(uuid.toString(), location); //Hashmap servant à remplir la base avec une clé valeur
         String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         db.collection(deviceId).add(locationData);
     }
@@ -160,8 +163,14 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public static UUID getTrackingUUID() {
+        return uuid;
+    }
+    public static void generateNewUuid() {
+        uuid = UUID.randomUUID();
+    }
 
-    private boolean getRunning(){
+    public static boolean getRunning() {
         return isRunning;
     }
 

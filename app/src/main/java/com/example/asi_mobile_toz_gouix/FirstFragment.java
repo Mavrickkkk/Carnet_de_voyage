@@ -95,10 +95,13 @@ public class FirstFragment extends Fragment {
         // Bouton
         btnDemarrer = view.findViewById(R.id.Btn_Demarrer);
         btnDemarrer.setOnClickListener(v -> toggleTracking());
-        btnDemarrer.setOnClickListener(v -> onClickDemarrer(view));
+        //btnDemarrer.setOnClickListener(v -> onClickDemarrer(view));
 
         //Marker de l'utilisateur qui va se déplacer
         marker = new Marker(this.mapView);
+
+        //Activité principale
+        MainActivity activity = (MainActivity) requireActivity();
 
         // Permissions
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
@@ -107,6 +110,11 @@ public class FirstFragment extends Fragment {
         } else {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS_REQUEST_CODE);
         }
+
+        if (MainActivity.getRunning())
+            btnDemarrer.setText("Arrêter");
+        else
+            btnDemarrer.setText("Démarrer");
 
         return view;
     }
@@ -139,59 +147,25 @@ public class FirstFragment extends Fragment {
             showPosition(true);
     }
 
+    /*
+     * Fonction qui sert à modifier l'état de suivi de localisation
+     * Modifie l'état du bouton selon la variable isRunning
+     */
     private void toggleTracking() {
         MainActivity activity = (MainActivity) requireActivity();
-        if (isTracking) {
+        if (MainActivity.getTrackingUUID() == null) {
+            MainActivity.generateNewUuid();
+        }
+        if (activity.getRunning()) {
+            btnExportGpx.setEnabled(true);
             activity.stopTracking();
             btnDemarrer.setText("Démarrer");
         } else {
+            btnExportGpx.setEnabled(false);
             activity.startTracking();
             btnDemarrer.setText("Arrêter");
         }
-        isTracking = !isTracking;
-    }
-
-    /**
-     * Fonction qui sert à démarrer le suivi de localisation.
-     * @param view vue du fragment
-     */
-    public void onClickDemarrer(View view) {
-        time = 10000; // a modifier plus tard
-
-
-
-        LocationRequest locationRequest = new LocationRequest.Builder(
-                Priority.PRIORITY_HIGH_ACCURACY,
-                (long) time// priorité
-                // intervalle en millisecondes
-        )
-                .setMinUpdateIntervalMillis((long) time) // équivalent de setFastestInterval
-                .build();
-        if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            // TODO: Consider calling
-            //    ActivityCompat#requestPermissions
-            return;
-        }
-        Button Btn_Demarrer = view.findViewById(R.id.Btn_Demarrer);
-        boolean isRunning = Btn_Demarrer.getText().toString().equals("Arrêter");
-        uuid = UUID.randomUUID();
-
-        if (isRunning) {
-            fusedLocationClient.removeLocationUpdates(MainActivity.getLocationCallback());
-            btnExportGpx.setEnabled(true);
-            Btn_Demarrer.setText("Démarrer");
-        }
-        else {
-            fusedLocationClient.requestLocationUpdates(locationRequest, MainActivity.getLocationCallback(), null).addOnCompleteListener(l ->{
-                if(l.isSuccessful()) {
-                    btnExportGpx.setEnabled(false);
-                    Btn_Demarrer.setText("Arrêter");
-                }
-                else{
-                    MainActivity.setRunning(false);
-                }
-            });
-        }
+        activity.setRunning(!activity.getRunning());
     }
 
     /**
