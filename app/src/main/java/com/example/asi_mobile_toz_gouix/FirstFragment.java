@@ -211,7 +211,7 @@ public class FirstFragment extends Fragment {
      * Fonction qui sert à exporter le fichier GPX et l'envoyer par mail
      */
     private void exporterEtEnvoyerGPX() {
-        if (MainActivity.locationData == null || MainActivity.locationData.isEmpty()) {
+        if (MainActivity.getLocations() == null || MainActivity.getLocations().isEmpty()) {
             Toast.makeText(getContext(), "Aucun trajet à exporter", Toast.LENGTH_SHORT).show();
             return;
         }
