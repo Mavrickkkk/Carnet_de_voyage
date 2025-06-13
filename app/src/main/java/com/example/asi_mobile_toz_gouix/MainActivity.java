@@ -33,6 +33,7 @@ import org.osmdroid.config.Configuration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 
@@ -48,13 +49,17 @@ public class MainActivity extends AppCompatActivity {
 
     // private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
     private static boolean isRunning;
-    private static UUID uuid = UUID.randomUUID();
+    private static boolean infoSaved;
+    private static UUID uuid;
 
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
         setContentView(R.layout.activity_main);
         locationData = new HashMap<>();
         locations = new ArrayList<Location>();
@@ -65,7 +70,7 @@ public class MainActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
 
         Fragment firstFragment = new FirstFragment();
-        Fragment secondFragment = new secondFragment();
+        Fragment secondFragment = new SecondFragment();
         Fragment thirdFragment = new ThirdFragment();
         setCurrentFragment(firstFragment);
 
@@ -103,7 +108,6 @@ public class MainActivity extends AppCompatActivity {
 
     public void startTracking() {
         long time = 10000;
-        if (uuid == null) uuid = UUID.randomUUID();
 
         LocationRequest locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
@@ -139,9 +143,35 @@ public class MainActivity extends AppCompatActivity {
 
     private void saveLocationData(Location location) {
         locations.add(location); //Liste servant à l'envoi du fichier gpx par mail
+        String trajetId = uuid.toString();
         locationData.put(uuid.toString(), location); //Hashmap servant à remplir la base avec une clé valeur
         String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-        db.collection(deviceId).add(locationData);
+
+        if (!infoSaved) {
+            createTrajetDocument(deviceId, trajetId);
+            infoSaved = true;
+        }
+        db.collection(deviceId)
+                .document(trajetId)
+                .collection("localisations")
+                .add(locationData)
+                .addOnSuccessListener(documentReference ->
+                Log.d("BDD", "Position ajoutée à " + trajetId)
+                )
+                .addOnFailureListener(e ->
+                        Log.e("BDD", "Erreur lors de l'enregistrement : ", e)
+                );
+    }
+
+    private void createTrajetDocument(String deviceId, String trajetId) {
+        Map<String, Object> meta = new HashMap<>();
+        meta.put("created_at", System.currentTimeMillis());
+
+        db.collection(deviceId)
+                .document(trajetId)
+                .set(meta)
+                .addOnSuccessListener(aVoid -> Log.d("FIRESTORE", "Document trajetId créé"))
+                .addOnFailureListener(e -> Log.e("FIRESTORE", "Erreur création trajetId", e));
     }
 
     @Override
@@ -168,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
     }
     public static void generateNewUuid() {
         uuid = UUID.randomUUID();
+        infoSaved = false;
     }
 
     public static boolean getRunning() {

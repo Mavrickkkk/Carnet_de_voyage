@@ -260,7 +260,6 @@ public class FirstFragment extends Fragment {
         MainActivity.setLocations();  // met à null la liste de localisations. Pour envoi de mail.
     }
 
-    public static UUID getUuid(){return uuid;}
 
     /**
      * Fonction qui sert a visualiser la position de l'utilisateur sur la carte.
