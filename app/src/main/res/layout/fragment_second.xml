@@ -3,12 +3,18 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".secondFragment">
+    tools:context=".SecondFragment">
 
+    <Spinner
+        android:id="@+id/deviceSelector"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"/>
     <ListView
         android:id="@+id/listeTrajets"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:layout_marginTop="64dp"/>
 
 
 </FrameLayout>
