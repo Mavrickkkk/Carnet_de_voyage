@@ -40,15 +40,12 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static HashMap<String, Object> locationData;
-
     private static ArrayList<Location> locations;
 
     private static LocationCallback locationCallback;
 
     private static FirebaseFirestore db;
 
-    // private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1;
     private static boolean isRunning;
     private static boolean infoSaved;
     private static UUID uuid;
@@ -62,7 +59,6 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().hide();
         }
         setContentView(R.layout.activity_main);
-        locationData = new HashMap<>();
         locations = new ArrayList<Location>();
         Context ctx = getApplicationContext();
         Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
@@ -99,7 +95,7 @@ public class MainActivity extends AppCompatActivity {
                 if (locationResult == null) return;
                 Location location = locationResult.getLastLocation();
                 if (location != null) {
-                    Log.d("LocationCallback", "UUID: " + uuid.toString() + " | Location: " + location.toString());
+                    Log.d("LocationCallback", "UUID: " + uuid.toString() + " | Location: " + location);
                     saveLocationData(location);
                 }
             }
@@ -112,7 +108,7 @@ public class MainActivity extends AppCompatActivity {
 
         LocationRequest locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
-                (long) time// priorité
+                time// priorité
                 // intervalle en millisecondes
         ).build();
 
@@ -136,19 +132,26 @@ public class MainActivity extends AppCompatActivity {
                 });
     }
 
+    /**
+     * Arrête le suivi de localisation
+     */
     public void stopTracking() {
         FusedLocationProviderClient fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
         fusedLocationClient.removeLocationUpdates(locationCallback);
         isRunning = false;
     }
 
+    /**
+     * Enregistre les données de localisation dans Firestore
+     * avec device Id -> trajetIdLong qui fait référence à un Long
+     * @param location
+     */
     private void saveLocationData(Location location) {
         registerDeviceIfNeeded();
 
         locations.add(location); //Liste servant à l'envoi du fichier gpx par mail
 
         String trajetId = uuid.toString();
-        locationData.put(uuid.toString(), location); //Hashmap servant à remplir la base avec une clé valeur
         String deviceName = getSharedPreferences("prefs", MODE_PRIVATE)
                 .getString("deviceName", null);
         if (deviceName == null) {
@@ -165,13 +168,16 @@ public class MainActivity extends AppCompatActivity {
                 .collection("trajets")
                 .document(trajetId)
                 .collection("localisations")
-                .add(locationData)
+                .add(location)
                 .addOnSuccessListener(documentReference ->
                         Log.d("FIRESTORE", "Position ajoutée à " + trajetId))
                 .addOnFailureListener(e ->
                         Log.e("FIRESTORE", "Erreur lors de l'enregistrement", e));
     }
 
+    /**
+     * Enregistre le device si il n'est pas déjà enregistré
+     */
     private void registerDeviceIfNeeded() {
         String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
 
@@ -215,6 +221,11 @@ public class MainActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> Log.e("FIRESTORE", "Erreur lors de la vérification du device", e));
     }
 
+    /**
+     * Crée le document trajetId dans la collection des devices
+     * @param deviceName
+     * @param trajetId
+     */
     private void createTrajetDocument(String deviceName, String trajetId) {
         Map<String, Object> meta = new HashMap<>();
         meta.put("created_at", System.currentTimeMillis());
@@ -247,9 +258,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    /**
+     * Retourne l'UUID du suivi de localisation
+     * @return
+     */
     public static UUID getTrackingUUID() {
         return uuid;
     }
+
+    /**
+     * Génère un nouveau UUID
+     */
     public static void generateNewUuid() {
         uuid = UUID.randomUUID();
         infoSaved = false;
@@ -268,10 +287,6 @@ public class MainActivity extends AppCompatActivity {
                 .beginTransaction()
                 .replace(R.id.flFragment, fragment)
                 .commit();
-    }
-
-    public static LocationCallback getLocationCallback() {
-        return locationCallback;
     }
 
     public static FirebaseFirestore getDb() {

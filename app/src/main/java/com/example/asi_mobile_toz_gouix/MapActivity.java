@@ -8,6 +8,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 
 import org.osmdroid.views.MapView;
@@ -18,15 +19,26 @@ import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.overlay.Marker;
 import org.osmdroid.views.overlay.Polyline;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class MapActivity extends AppCompatActivity {
 
     private MapView map;
 
+    /**
+     * Called when the activity is first created.
+     * @param savedInstanceState If the activity is being re-initialized after
+     *     previously being shut down then this Bundle contains the data it most
+     *     recently supplied in {@link #onSaveInstanceState}.  <b><i>Note: Otherwise it is null.</i></b>
+     *
+     */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,67 +46,83 @@ public class MapActivity extends AppCompatActivity {
 
         map = findViewById(R.id.map);
         map.setTileSource(TileSourceFactory.MAPNIK);
-        map.setBuiltInZoomControls(true);
         map.setMultiTouchControls(true);
 
-        String uuidToShow = getIntent().getStringExtra("uuid");
-        if (uuidToShow == null) {
-            Log.e("MapActivity", "UUID absent dans l'Intent");
+        Long trajetId = getIntent().getLongExtra("trajetIdLong",0);
+
+
+
+        if (trajetId == null) {
+            Log.e("MapActivity", "trajetId absent dans l'Intent");
             return;
         }
 
         String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
-
         MainActivity.getDb()
-                .collection(deviceId)
+                .collection("devices")
+                .whereEqualTo("deviceId", deviceId)
                 .get()
-                .addOnSuccessListener(querySnapshot -> {
-                    // Regrouper les points par UUID
-                    Map<String, List<GeoPoint>> uuidToPoints = new HashMap<>();
-
-                    for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
-                        Map<String, Object> data = doc.getData();
-                        if (data == null) continue;
-
-                        for (Map.Entry<String, Object> entry : data.entrySet()) {
-                            String uuid = entry.getKey();
-                            Object value = entry.getValue();
-
-                            if (!(value instanceof Map)) continue;
-                            Map<String, Object> locMap = (Map<String, Object>) value;
-
-                            Object latObj = locMap.get("mLatitude");
-                            Object lonObj = locMap.get("mLongitude");
-                            if (latObj == null) latObj = locMap.get("latitude");
-                            if (lonObj == null) lonObj = locMap.get("longitude");
-
-                            if (latObj instanceof Number && lonObj instanceof Number) {
-                                double lat = ((Number) latObj).doubleValue();
-                                double lon = ((Number) lonObj).doubleValue();
-                                GeoPoint point = new GeoPoint(lat, lon);
-
-                                if (!uuidToPoints.containsKey(uuid)) {
-                                    uuidToPoints.put(uuid, new ArrayList<>());
-                                }
-                                uuidToPoints.get(uuid).add(point);
-                            }
-                        }
-                    }
-
-                    List<GeoPoint> geoPoints = uuidToPoints.get(uuidToShow);
-                    if (geoPoints == null || geoPoints.isEmpty()) {
-                        Toast.makeText(this, "Aucun point trouvé pour ce trajet.", Toast.LENGTH_LONG).show();
+                .addOnSuccessListener(deviceSnapshot -> {
+                    if (deviceSnapshot.isEmpty()) {
+                        Log.e("MapActivity", "Aucun device trouvé pour deviceId = " + deviceId);
                         return;
                     }
 
-                    drawPolyline(geoPoints);
+                    DocumentSnapshot deviceDoc = deviceSnapshot.getDocuments().get(0);
+
+                    deviceDoc.getReference()
+                            .collection("trajets")
+                            .whereEqualTo("created_at", trajetId)
+                            .get()
+                            .addOnSuccessListener(querySnapshot -> {
+                                if (querySnapshot.isEmpty()) {
+                                    Log.e("MapActivity", "Aucun trajet trouvé avec created_at = " + trajetId);
+                                    return;
+                                }
+
+                                DocumentSnapshot trajetDoc = querySnapshot.getDocuments().get(0);
+
+                                trajetDoc.getReference()
+                                        .collection("localisations")
+                                        .get()
+                                        .addOnSuccessListener(pointSnapshots -> {
+                                            List<GeoPoint> geoPoints = new ArrayList<>();
+
+                                            for (DocumentSnapshot pointDoc : pointSnapshots.getDocuments()) {
+                                                Double lat = pointDoc.getDouble("latitude");
+                                                Double lon = pointDoc.getDouble("longitude");
+
+                                                if (lat != null && lon != null) {
+                                                    geoPoints.add(new GeoPoint(lat, lon));
+                                                }
+                                            }
+
+                                            if (geoPoints.isEmpty()) {
+                                                Toast.makeText(this, "Aucun point trouvé pour ce trajet.", Toast.LENGTH_LONG).show();
+                                            } else {
+                                                drawPolyline(geoPoints);
+                                            }
+                                        })
+                                        .addOnFailureListener(e -> {
+                                            Log.e("MapActivity", "Erreur récupération des localisations", e);
+                                        });
+
+                            })
+                            .addOnFailureListener(e -> {
+                                Log.e("MapActivity", "Erreur lors de la requête sur les trajets", e);
+                            });
+
                 })
                 .addOnFailureListener(e -> {
-                    Log.e("MapActivity", "Erreur Firestore", e);
-                    Toast.makeText(this, "Erreur lors de la récupération des données.", Toast.LENGTH_LONG).show();
+                    Log.e("MapActivity", "Erreur lors de la requête sur les devices", e);
                 });
+
     }
 
+    /**
+     * Dessine une ligne sur la carte avec les points fournis
+     * @param geoPoints
+     */
     private void drawPolyline(List<GeoPoint> geoPoints) {
         IMapController mapController = map.getController();
         mapController.setZoom(16.0);
@@ -115,6 +143,3 @@ public class MapActivity extends AppCompatActivity {
         Log.d("MapActivity", "Ligne tracée avec " + geoPoints.size() + " points");
     }
 }
-
-
-
