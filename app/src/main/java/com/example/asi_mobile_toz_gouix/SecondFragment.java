@@ -31,9 +31,21 @@ public class SecondFragment extends Fragment {
     private ListView listView;
     private ArrayAdapter<String> adapter;
     private ArrayList<String> trajetIdList = new ArrayList<>();
+    private ArrayList<Long> trajetIdListLong = new ArrayList<>();
     private Spinner deviceSelector;
 
-
+    /**
+     * Appeler quand le Fragment est appelé
+     * @param inflater The LayoutInflater object that can be used to inflate
+     * any views in the fragment,
+     * @param container If non-null, this is the parent view that the fragment's
+     * UI should be attached to.  The fragment should not add the view itself,
+     * but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     * from a previous saved state as given here.
+     *
+     * @return
+     */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
@@ -50,7 +62,7 @@ public class SecondFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     ArrayList<String> deviceNames = new ArrayList<>();
-                    String currentDeviceId = Settings.Secure.getString(requireContext().getContentResolver(), Settings.Secure.ANDROID_ID);
+                    String currentDeviceId = Settings.Secure.getString(requireContext().getContentResolver(), Settings.Secure.ANDROID_ID); //récupère l'id du device.
                     String defaultDeviceName = null;
 
                     for (DocumentSnapshot doc : querySnapshot.getDocuments()) {
@@ -90,22 +102,32 @@ public class SecondFragment extends Fragment {
         // Quand on clique sur un trajet
         listView.setOnItemClickListener((parent, view1, position, id) -> {
             String selectedTrajetId = trajetIdList.get(position);
-            Intent intent = new Intent(getActivity(), MapActivity.class);
+            Intent intent = new Intent(getActivity(), MapActivity.class); //Appel la classe MapActivity qui gère l'affichage du trajet.
             intent.putExtra("trajetId", selectedTrajetId);
+            intent.putExtra("trajetIdLong", trajetIdListLong.get(position)); // permet de récupérer le timeStamp de manoère propre
             startActivity(intent);
         });
 
         return view;
     }
 
+    /**
+     * Convertir timeStamp en date pour l'affichage dans la liste des trajets
+     * @param timestamp
+     * @return
+     */
     public static String timestampToDate(long timestamp) {
         Date date = new Date(timestamp);
         SimpleDateFormat sdf = new SimpleDateFormat("dd MMM yyyy 'à' HH:mm", Locale.getDefault());
         return sdf.format(date);
     }
 
+    /**
+     * Charge les trajets pour un device donné
+     * @param deviceName
+     */
     private void loadTrajetsForDevice(@NonNull String deviceName) {
-        MainActivity.getDb()
+        MainActivity.getDb()//récupère la db initialisé dans le MainActivity
                 .collection("devices")
                 .document(deviceName)
                 .collection("trajets")
@@ -117,6 +139,7 @@ public class SecondFragment extends Fragment {
                         if (createdAtObj instanceof Number) {
                             long timestamp = ((Number) createdAtObj).longValue();
                             trajetIdList.add(timestampToDate(timestamp));
+                            trajetIdListLong.add(timestamp);
                         } else {
                             trajetIdList.add("Pas de date ?!");
                         }
