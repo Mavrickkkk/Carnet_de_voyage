@@ -25,6 +25,7 @@ import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.location.Priority;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 
@@ -142,32 +143,85 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void saveLocationData(Location location) {
+        registerDeviceIfNeeded();
+
         locations.add(location); //Liste servant à l'envoi du fichier gpx par mail
+
         String trajetId = uuid.toString();
         locationData.put(uuid.toString(), location); //Hashmap servant à remplir la base avec une clé valeur
-        String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+        String deviceName = getSharedPreferences("prefs", MODE_PRIVATE)
+                .getString("deviceName", null);
+        if (deviceName == null) {
+            Log.e("FIRESTORE", "Device name non trouvé, annulation de l'enregistrement");
+            return;
+        }
 
         if (!infoSaved) {
-            createTrajetDocument(deviceId, trajetId);
+            createTrajetDocument(deviceName, trajetId);
             infoSaved = true;
         }
-        db.collection(deviceId)
+        db.collection("devices")
+                .document(deviceName)
+                .collection("trajets")
                 .document(trajetId)
                 .collection("localisations")
                 .add(locationData)
                 .addOnSuccessListener(documentReference ->
-                Log.d("BDD", "Position ajoutée à " + trajetId)
-                )
+                        Log.d("FIRESTORE", "Position ajoutée à " + trajetId))
                 .addOnFailureListener(e ->
-                        Log.e("BDD", "Erreur lors de l'enregistrement : ", e)
-                );
+                        Log.e("FIRESTORE", "Erreur lors de l'enregistrement", e));
     }
 
-    private void createTrajetDocument(String deviceId, String trajetId) {
+    private void registerDeviceIfNeeded() {
+        String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
+
+        db.collection("devices")
+                .whereEqualTo("deviceId", deviceId)
+                .get()
+                .addOnSuccessListener(querySnapshot -> {
+                    if (querySnapshot.isEmpty()) {
+                        db.collection("devices")
+                                .get()
+                                .addOnSuccessListener(allDevices -> {
+                                    int count = allDevices.size() + 1;
+                                    String deviceName = "Téléphone " + count;
+
+                                    Map<String, Object> deviceInfo = new HashMap<>();
+                                    deviceInfo.put("deviceId", deviceId);
+                                    deviceInfo.put("registeredAt", System.currentTimeMillis());
+
+                                    db.collection("devices").document(deviceName)
+                                            .set(deviceInfo)
+                                            .addOnSuccessListener(aVoid -> {
+                                                Log.d("FIRESTORE", "Device enregistré : " + deviceName);
+                                                getSharedPreferences("prefs", MODE_PRIVATE)
+                                                        .edit()
+                                                        .putString("deviceName", deviceName)
+                                                        .apply();
+                                            })
+                                            .addOnFailureListener(e -> Log.e("FIRESTORE", "Erreur d'enregistrement du device", e));
+                                });
+                    } else {
+                        DocumentSnapshot existingDoc = querySnapshot.getDocuments().get(0);
+                        String deviceName = existingDoc.getId();
+
+                        Log.d("FIRESTORE", "Device déjà enregistré : " + deviceName);
+                        getSharedPreferences("prefs", MODE_PRIVATE)
+                                .edit()
+                                .putString("deviceName", deviceName)
+                                .apply();
+                    }
+                })
+                .addOnFailureListener(e -> Log.e("FIRESTORE", "Erreur lors de la vérification du device", e));
+    }
+
+    private void createTrajetDocument(String deviceName, String trajetId) {
         Map<String, Object> meta = new HashMap<>();
         meta.put("created_at", System.currentTimeMillis());
 
-        db.collection(deviceId)
+        db.collection("devices")
+                .document(deviceName)
+                .collection("trajets")
                 .document(trajetId)
                 .set(meta)
                 .addOnSuccessListener(aVoid -> Log.d("FIRESTORE", "Document trajetId créé"))
