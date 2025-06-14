@@ -26,8 +26,6 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.location.LocationRequest;
-import com.google.android.gms.location.Priority;
 
 import org.osmdroid.config.Configuration;
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
@@ -39,36 +37,28 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Locale;
-import java.util.Objects;
-import java.util.UUID;
 
 public class FirstFragment extends Fragment {
     private Marker marker;
     private Button btnExportGpx;
     private EditText emailField;
-    private static UUID uuid;
     private MapView mapView;
     private FusedLocationProviderClient fusedLocationClient;
     private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1001;
     private boolean isTracking = false;
     private Button btnDemarrer;
 
-    private static float time = 10000; // valeur par défaut, modifiable via setTime()
-
-    public static void setTime(float timeGiven) {
-        time = timeGiven;
-    }
 
     /**
      * Fonction qui sert à initialiser le fragment.
-     * @param inflater The LayoutInflater object that can be used to inflate
-     * any views in the fragment,
-     * @param container If non-null, this is the parent view that the fragment's
-     * UI should be attached to.  The fragment should not add the view itself,
-     * but this can be used to generate the LayoutParams of the view.
-     * @param savedInstanceState If non-null, this fragment is being re-constructed
-     * from a previous saved state as given here.
      *
+     * @param inflater           The LayoutInflater object that can be used to inflate
+     *                           any views in the fragment,
+     * @param container          If non-null, this is the parent view that the fragment's
+     *                           UI should be attached to.  The fragment should not add the view itself,
+     *                           but this can be used to generate the LayoutParams of the view.
+     * @param savedInstanceState If non-null, this fragment is being re-constructed
+     *                           from a previous saved state as given here.
      * @return
      */
     @Nullable
@@ -120,10 +110,9 @@ public class FirstFragment extends Fragment {
     }
 
     /**
-     *
-     * @param view The View returned by {@link #onCreateView(LayoutInflater, ViewGroup, Bundle)}.
+     * @param view               The View returned by {@link #onCreateView(LayoutInflater, ViewGroup, Bundle)}.
      * @param savedInstanceState If non-null, this fragment is being re-constructed
-     * from a previous saved state as given here.
+     *                           from a previous saved state as given here.
      */
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -144,7 +133,7 @@ public class FirstFragment extends Fragment {
      * Fonction qui sert à afficher la position de l'utilisateur sur la carte, la première fois quand la carte se charge.
      */
     private void displayUserLocation() {
-            showPosition(true);
+        showPosition(true);
     }
 
     /*
@@ -153,23 +142,30 @@ public class FirstFragment extends Fragment {
      */
     private void toggleTracking() {
         MainActivity activity = (MainActivity) requireActivity();
+        Log.d("ÉTAPE 1", "Toggle Tracking");
+
         if (MainActivity.getTrackingUUID() == null) {
             MainActivity.generateNewUuid();
+            Log.d("ÉTAPE 2", "Creation de l'UUID: " + MainActivity.getTrackingUUID());
         }
+
         if (activity.getRunning()) {
             btnExportGpx.setEnabled(true);
             activity.stopTracking();
+            Log.d("ÉTAPE FINALE", "Désactivation du suivi de localisation");
             btnDemarrer.setText("Démarrer");
         } else {
+            Log.d("ÉTAPE 3", "Activation du suivi de localisation");
             btnExportGpx.setEnabled(false);
             activity.startTracking();
             btnDemarrer.setText("Arrêter");
         }
         activity.setRunning(!activity.getRunning());
+        Log.d("CHANGEMENT D'ÉTAT", "isRunning = " + activity.getRunning());
     }
 
     /**
-     * Fonction qui sert à reprendre la carte
+     * Fonction lorsque l'utilisateur retourne dans l'application
      */
     @Override
     public void onResume() {
@@ -178,7 +174,7 @@ public class FirstFragment extends Fragment {
     }
 
     /**
-     * Fonction qui sert à mettre en pause la carte
+     * Fonction lorsque l'application est en pause
      */
     @Override
     public void onPause() {
@@ -200,12 +196,6 @@ public class FirstFragment extends Fragment {
             }
         }
     }
-
-    /**
-     * Fonction qui sert à modifier la durée du suivi de localisation en millisecondes (voir ThirdFragment)
-     * @param timeNew
-     */
-    public static void setTime(long timeNew){time = (long)timeNew;}
 
     /**
      * Fonction qui sert à exporter le fichier GPX et l'envoyer par mail
@@ -263,10 +253,11 @@ public class FirstFragment extends Fragment {
 
     /**
      * Fonction qui sert a visualiser la position de l'utilisateur sur la carte.
+     *
      * @param first la seul fois ou il faut centré la carte au premier affichage
      */
-    public void showPosition(boolean first){
-        if(!isAdded()) return;
+    public void showPosition(boolean first) {
+        if (!isAdded()) return;
         if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             fusedLocationClient.getLastLocation()
@@ -279,8 +270,7 @@ public class FirstFragment extends Fragment {
                                 marker.setPosition(point);
                                 marker.setTitle("Ma position");
                                 this.mapView.getOverlays().add(marker);
-                            }
-                            else {
+                            } else {
                                 marker.setPosition(point);
                                 marker.setTitle("Ma position");
                                 this.mapView.getOverlays().add(marker);

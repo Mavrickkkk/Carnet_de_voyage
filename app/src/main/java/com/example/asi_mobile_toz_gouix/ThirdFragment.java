@@ -1,37 +1,39 @@
 package com.example.asi_mobile_toz_gouix;
 
-//import static com.example.asi_mobile_toz_gouix.MainActivity.setTime;
-
-import static com.example.asi_mobile_toz_gouix.FirstFragment.setTime;
-
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.SeekBar;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.slider.Slider;
 
 public class ThirdFragment extends Fragment {
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         View view = inflater.inflate(R.layout.fragment_third, container, false);
 
-        // Récupère le slider depuis la vue
         SeekBar seekBar =(SeekBar) view.findViewById(R.id.SliderTime);
-        seekBar.setMax(20000);
-        seekBar.setMin(100);
+        TextView sliderValueText = view.findViewById(R.id.sliderValueText);
+
+        seekBar.setMax(40000);
+        seekBar.setMin(1000);
+        seekBar.setProgress(10000);
+
+        sliderValueText.setText("Durée : 10000 ms");
+
         seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-            FirstFragment.setTime(progress);
+                int value = Math.max(progress, 1000);
+                sliderValueText.setText("Durée : " + value + " ms");
+                MainActivity.setTime(progress);
             }
 
             @Override

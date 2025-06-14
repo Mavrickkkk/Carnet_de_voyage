@@ -1,7 +1,6 @@
 package com.example.asi_mobile_toz_gouix;
 
 import android.content.Intent;
-import android.location.Location;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
@@ -22,9 +21,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Locale;
-import java.util.Map;
 
 public class SecondFragment extends Fragment {
 
