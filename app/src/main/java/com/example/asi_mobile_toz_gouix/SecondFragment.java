@@ -24,7 +24,7 @@ import java.util.Date;
 import java.util.Locale;
 
 public class SecondFragment extends Fragment {
-
+    private String devicename;
     private ListView listView;
     private ArrayAdapter<String> adapter;
     private ArrayList<String> trajetIdList = new ArrayList<>();
@@ -88,6 +88,7 @@ public class SecondFragment extends Fragment {
         deviceSelector.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                devicename = parent.getItemAtPosition(position).toString();
                 String selectedDeviceName = parent.getItemAtPosition(position).toString();
                 loadTrajetsForDevice(selectedDeviceName);
             }
@@ -101,7 +102,8 @@ public class SecondFragment extends Fragment {
             String selectedTrajetId = trajetIdList.get(position);
             Intent intent = new Intent(getActivity(), MapActivity.class); //Appel la classe MapActivity qui gère l'affichage du trajet.
             intent.putExtra("trajetId", selectedTrajetId);
-            intent.putExtra("trajetIdLong", trajetIdListLong.get(position)); // permet de récupérer le timeStamp de manoère propre
+            intent.putExtra("trajetIdLong", trajetIdListLong.get(position));
+            intent.putExtra("deviceId",devicename);// permet de récupérer le timeStamp de manoère propre
             startActivity(intent);
         });
 
@@ -131,6 +133,7 @@ public class SecondFragment extends Fragment {
                 .get()
                 .addOnSuccessListener(querySnapshot -> {
                     trajetIdList.clear();
+                    trajetIdListLong.clear();
                     for (DocumentSnapshot document : querySnapshot.getDocuments()) {
                         Object createdAtObj = document.getLong("created_at");
                         if (createdAtObj instanceof Number) {

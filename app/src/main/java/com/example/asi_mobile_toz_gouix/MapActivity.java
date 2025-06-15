@@ -49,7 +49,7 @@ public class MapActivity extends AppCompatActivity {
         map.setMultiTouchControls(true);
 
         Long trajetId = getIntent().getLongExtra("trajetIdLong",0);
-
+        String deviceName = getIntent().getStringExtra("deviceId");
 
 
         if (trajetId == null) {
@@ -60,21 +60,11 @@ public class MapActivity extends AppCompatActivity {
         String deviceId = Settings.Secure.getString(getContentResolver(), Settings.Secure.ANDROID_ID);
         MainActivity.getDb()
                 .collection("devices")
-                .whereEqualTo("deviceId", deviceId)
+                .document(deviceName)
+                .collection("trajets")
+                .whereEqualTo("created_at", trajetId)
                 .get()
-                .addOnSuccessListener(deviceSnapshot -> {
-                    if (deviceSnapshot.isEmpty()) {
-                        Log.e("MapActivity", "Aucun device trouvé pour deviceId = " + deviceId);
-                        return;
-                    }
-
-                    DocumentSnapshot deviceDoc = deviceSnapshot.getDocuments().get(0);
-
-                    deviceDoc.getReference()
-                            .collection("trajets")
-                            .whereEqualTo("created_at", trajetId)
-                            .get()
-                            .addOnSuccessListener(querySnapshot -> {
+                .addOnSuccessListener(querySnapshot -> {
                                 if (querySnapshot.isEmpty()) {
                                     Log.e("MapActivity", "Aucun trajet trouvé avec created_at = " + trajetId);
                                     return;
@@ -112,12 +102,8 @@ public class MapActivity extends AppCompatActivity {
                                 Log.e("MapActivity", "Erreur lors de la requête sur les trajets", e);
                             });
 
-                })
-                .addOnFailureListener(e -> {
-                    Log.e("MapActivity", "Erreur lors de la requête sur les devices", e);
-                });
+                }
 
-    }
 
     /**
      * Dessine une ligne sur la carte avec les points fournis
