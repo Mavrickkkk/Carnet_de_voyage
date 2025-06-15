@@ -46,8 +46,6 @@ public class FirstFragment extends Fragment {
     private EditText emailField;
     private MapView mapView;
     private FusedLocationProviderClient fusedLocationClient;
-    private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1001;
-    private boolean isTracking = false;
     private Button btnDemarrer;
     private ActivityResultLauncher<String> permissionLauncher;
 
@@ -164,16 +162,18 @@ public class FirstFragment extends Fragment {
         if (activity.getRunning()) {
             btnExportGpx.setEnabled(true);
             activity.stopTracking();
+            activity.setRunning(false);
+            Log.d("CHANGEMENT D'ÉTAT", "isRunning = " + activity.getRunning());
             Log.d("ÉTAPE FINALE", "Désactivation du suivi de localisation");
             btnDemarrer.setText("Démarrer");
         } else {
             Log.d("ÉTAPE 3", "Activation du suivi de localisation");
             btnExportGpx.setEnabled(false);
             activity.startTracking();
+            activity.setRunning(true);
+            Log.d("CHANGEMENT D'ÉTAT", "isRunning = " + activity.getRunning());
             btnDemarrer.setText("Arrêter");
         }
-        activity.setRunning(!activity.getRunning());
-        Log.d("CHANGEMENT D'ÉTAT", "isRunning = " + activity.getRunning());
     }
 
     /**
@@ -192,9 +192,6 @@ public class FirstFragment extends Fragment {
     public void onPause() {
         super.onPause();
         mapView.onPause();
-        if (isTracking) {
-            toggleTracking();
-        }
     }
 
     /**
