@@ -17,6 +17,8 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
@@ -47,6 +49,8 @@ public class FirstFragment extends Fragment {
     private final int REQUEST_PERMISSIONS_REQUEST_CODE = 1001;
     private boolean isTracking = false;
     private Button btnDemarrer;
+    private ActivityResultLauncher<String> permissionLauncher;
+
 
 
     /**
@@ -59,13 +63,15 @@ public class FirstFragment extends Fragment {
      *                           but this can be used to generate the LayoutParams of the view.
      * @param savedInstanceState If non-null, this fragment is being re-constructed
      *                           from a previous saved state as given here.
-     * @return
+     * @return Return the View for the fragment's UI, or null.
      */
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_first, container, false);
+
+
 
         Context context = requireContext();
         Configuration.getInstance().load(context, PreferenceManager.getDefaultSharedPreferences(context));
@@ -85,20 +91,26 @@ public class FirstFragment extends Fragment {
         // Bouton
         btnDemarrer = view.findViewById(R.id.Btn_Demarrer);
         btnDemarrer.setOnClickListener(v -> toggleTracking());
-        //btnDemarrer.setOnClickListener(v -> onClickDemarrer(view));
 
         //Marker de l'utilisateur qui va se déplacer
         marker = new Marker(this.mapView);
 
-        //Activité principale
-        MainActivity activity = (MainActivity) requireActivity();
 
-        // Permissions
+        permissionLauncher = registerForActivityResult(
+                new ActivityResultContracts.RequestPermission(),
+                isGranted -> {
+                    if (isGranted) {
+                        displayUserLocation();
+                    } else {
+                        Toast.makeText(requireContext(), "La permission de localisation est requise", Toast.LENGTH_SHORT).show();
+                    }
+                });
+
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             displayUserLocation();
         } else {
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_PERMISSIONS_REQUEST_CODE);
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
         if (MainActivity.getRunning())
@@ -182,18 +194,6 @@ public class FirstFragment extends Fragment {
         mapView.onPause();
         if (isTracking) {
             toggleTracking();
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        if (requestCode == REQUEST_PERMISSIONS_REQUEST_CODE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                displayUserLocation();
-            } else {
-                Toast.makeText(getContext(), "Permission refusée", Toast.LENGTH_SHORT).show();
-            }
         }
     }
 
