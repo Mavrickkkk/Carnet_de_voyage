@@ -154,7 +154,7 @@ public class FirstFragment extends Fragment {
         MainActivity activity = (MainActivity) requireActivity();
         Log.d("ÉTAPE 1", "Toggle Tracking");
 
-        if (MainActivity.getTrackingUUID() == null) {
+        if (MainActivity.getTrackingUUID() == null || btnDemarrer.getText() == "Démarrer") {
             MainActivity.generateNewUuid();
             Log.d("ÉTAPE 2", "Creation de l'UUID: " + MainActivity.getTrackingUUID());
         }

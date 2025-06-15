@@ -152,7 +152,7 @@ public class MainActivity extends AppCompatActivity {
      */
     private void saveLocationData(Location location) {
         registerDeviceIfNeeded();
-        if(location != null)
+        if(location != null && isRunning)
             locations.add(location);
 
         String trajetId = uuid.toString();
