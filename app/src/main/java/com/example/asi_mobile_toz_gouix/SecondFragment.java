@@ -132,7 +132,7 @@ public class SecondFragment extends Fragment {
                 .addOnSuccessListener(querySnapshot -> {
                     trajetIdList.clear();
                     for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                        Object createdAtObj = document.get("created_at");
+                        Object createdAtObj = document.getLong("created_at");
                         if (createdAtObj instanceof Number) {
                             long timestamp = ((Number) createdAtObj).longValue();
                             trajetIdList.add(timestampToDate(timestamp));
