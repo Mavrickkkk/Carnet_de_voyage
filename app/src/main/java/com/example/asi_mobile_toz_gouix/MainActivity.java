@@ -152,8 +152,8 @@ public class MainActivity extends AppCompatActivity {
      */
     private void saveLocationData(Location location) {
         registerDeviceIfNeeded();
-
-        locations.add(location);
+        if(location != null)
+            locations.add(location);
 
         String trajetId = uuid.toString();
         String deviceName = getSharedPreferences("prefs", MODE_PRIVATE)
