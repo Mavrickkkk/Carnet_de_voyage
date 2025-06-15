@@ -130,8 +130,8 @@ public class MapActivity extends AppCompatActivity {
 
         Polyline polyline = new Polyline();
         polyline.setPoints(geoPoints);
-        polyline.setColor(Color.BLUE);
-        polyline.setWidth(6f);
+        polyline.getOutlinePaint().setColor(Color.BLACK);
+        polyline.getOutlinePaint().setStrokeWidth(6f);
         map.getOverlays().add(polyline);
 
         Marker startMarker = new Marker(map);
