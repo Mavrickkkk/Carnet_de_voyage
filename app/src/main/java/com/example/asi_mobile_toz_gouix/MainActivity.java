@@ -4,7 +4,6 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Looper;
 import android.preference.PreferenceManager;
@@ -37,20 +36,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-
 public class MainActivity extends AppCompatActivity {
 
     private static ArrayList<Location> locations;
-
     private static LocationCallback locationCallback;
-
     private static FirebaseFirestore db;
-
     private static boolean isRunning;
     private static boolean infoSaved;
     private static UUID uuid;
+    private static long time = 10000; // Temps entre chaque envoi de localisation en ms (10s à la base)
 
 
+    //Cœur de l'application
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,6 +85,7 @@ public class MainActivity extends AppCompatActivity {
                     return false;
                 }
         );
+
         // Callback pour mise à jour en direct
         locationCallback = new LocationCallback() {
             @Override
@@ -95,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
                 if (locationResult == null) return;
                 Location location = locationResult.getLastLocation();
                 if (location != null) {
-                    Log.d("LocationCallback", "UUID: " + uuid.toString() + " | Location: " + location);
+                    Log.d("ÉTAPE 5", "Location Callback " + " | Location: " + location);
                     saveLocationData(location);
                 }
             }
@@ -103,8 +101,10 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+    //Tracking GPS
+
     public void startTracking() {
-        long time = 10000;
 
         LocationRequest locationRequest = new LocationRequest.Builder(
                 Priority.PRIORITY_HIGH_ACCURACY,
@@ -123,10 +123,10 @@ public class MainActivity extends AppCompatActivity {
         fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
-                        Log.d("MainActivity", "Suivi de localisation démarré");
+                        Log.d("ETAPE 4", "Suivi de localisation démarré");
                         isRunning = true;
                     } else {
-                        Log.e("MainActivity", "Échec du démarrage du suivi");
+                        Log.e("ERREUR", "Échec du démarrage du suivi");
                         isRunning = false;
                     }
                 });
@@ -141,21 +141,25 @@ public class MainActivity extends AppCompatActivity {
         isRunning = false;
     }
 
+
+    //Interactif avec Firestore
+
     /**
      * Enregistre les données de localisation dans Firestore
      * avec device Id -> trajetIdLong qui fait référence à un Long
+     *
      * @param location
      */
     private void saveLocationData(Location location) {
         registerDeviceIfNeeded();
 
-        locations.add(location); //Liste servant à l'envoi du fichier gpx par mail
+        locations.add(location);
 
         String trajetId = uuid.toString();
         String deviceName = getSharedPreferences("prefs", MODE_PRIVATE)
                 .getString("deviceName", null);
         if (deviceName == null) {
-            Log.e("FIRESTORE", "Device name non trouvé, annulation de l'enregistrement");
+            Log.e("ERREUR", "Device name non trouvé, annulation de l'enregistrement");
             return;
         }
 
@@ -170,9 +174,9 @@ public class MainActivity extends AppCompatActivity {
                 .collection("localisations")
                 .add(location)
                 .addOnSuccessListener(documentReference ->
-                        Log.d("FIRESTORE", "Position ajoutée à " + trajetId))
+                        Log.d("ETAPE 7", "Position ajoutée à " + trajetId))
                 .addOnFailureListener(e ->
-                        Log.e("FIRESTORE", "Erreur lors de l'enregistrement", e));
+                        Log.e("ERREUR", "Erreur lors de l'enregistrement", e));
     }
 
     /**
@@ -199,30 +203,31 @@ public class MainActivity extends AppCompatActivity {
                                     db.collection("devices").document(deviceName)
                                             .set(deviceInfo)
                                             .addOnSuccessListener(aVoid -> {
-                                                Log.d("FIRESTORE", "Device enregistré : " + deviceName);
+                                                Log.d("ETAPE BONUS", "Device enregistré : " + deviceName);
                                                 getSharedPreferences("prefs", MODE_PRIVATE)
                                                         .edit()
                                                         .putString("deviceName", deviceName)
                                                         .apply();
                                             })
-                                            .addOnFailureListener(e -> Log.e("FIRESTORE", "Erreur d'enregistrement du device", e));
+                                            .addOnFailureListener(e -> Log.e("ERREUR", "Erreur d'enregistrement du device", e));
                                 });
                     } else {
                         DocumentSnapshot existingDoc = querySnapshot.getDocuments().get(0);
                         String deviceName = existingDoc.getId();
 
-                        Log.d("FIRESTORE", "Device déjà enregistré : " + deviceName);
+                        Log.d("ETAPE BONUS", "Device déjà enregistré : " + deviceName);
                         getSharedPreferences("prefs", MODE_PRIVATE)
                                 .edit()
                                 .putString("deviceName", deviceName)
                                 .apply();
                     }
                 })
-                .addOnFailureListener(e -> Log.e("FIRESTORE", "Erreur lors de la vérification du device", e));
+                .addOnFailureListener(e -> Log.e("ERREUR", "Erreur lors de la vérification du device", e));
     }
 
     /**
      * Crée le document trajetId dans la collection des devices
+     *
      * @param deviceName
      * @param trajetId
      */
@@ -235,20 +240,19 @@ public class MainActivity extends AppCompatActivity {
                 .collection("trajets")
                 .document(trajetId)
                 .set(meta)
-                .addOnSuccessListener(aVoid -> Log.d("FIRESTORE", "Document trajetId créé"))
-                .addOnFailureListener(e -> Log.e("FIRESTORE", "Erreur création trajetId", e));
+                .addOnSuccessListener(aVoid -> Log.d("ETAPE 6", "Document trajetId créé"))
+                .addOnFailureListener(e -> Log.e("ERREUR", "Erreur création trajetId", e));
     }
+
 
     @Override
     public void onResume() {
         super.onResume();
-        // map.onResume(); // maintenant dans le fragment
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        // map.onPause(); // maintenant dans le fragment
     }
 
     @Override
@@ -259,14 +263,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Retourne l'UUID du suivi de localisation
-     * @return
-     */
-    public static UUID getTrackingUUID() {
-        return uuid;
-    }
-
-    /**
      * Génère un nouveau UUID
      */
     public static void generateNewUuid() {
@@ -274,14 +270,62 @@ public class MainActivity extends AppCompatActivity {
         infoSaved = false;
     }
 
+
+    //Getters
+
+    /**
+     * Retourne l'UUID du suivi de localisation
+     *
+     * @return uuid
+     */
+    public static UUID getTrackingUUID() {
+        return uuid;
+    }
+
+    /**
+     * Retourne l'état du suivi de localisation
+     *
+     * @return boolean
+     */
     public static boolean getRunning() {
         return isRunning;
     }
 
-    static void setRunning(boolean newIsRunning){
+    /**
+     * Retourne la base de données Firestore
+     *
+     * @return db
+     */
+    public static FirebaseFirestore getDb() {
+        return db;
+    }
+
+    /**
+     * Retourne la liste des localisations
+     *
+     * @return locations
+     */
+    public static List<Location> getLocations() {
+        return locations;
+    }
+
+
+    //Setters
+
+    /**
+     * Met à jour l'état du suivi de localisation
+     *
+     * @param newIsRunning
+     */
+    static void setRunning(boolean newIsRunning) {
         isRunning = newIsRunning;
     }
 
+    /**
+     * Met à jour le Fragment actuel
+     *
+     * @param fragment
+     */
     private void setCurrentFragment(Fragment fragment) {
         getSupportFragmentManager()
                 .beginTransaction()
@@ -289,11 +333,20 @@ public class MainActivity extends AppCompatActivity {
                 .commit();
     }
 
-    public static FirebaseFirestore getDb() {
-        return db;
+    /**
+     * Met à jour la localisation
+     */
+    public static void setLocations() {
+        locations = null;
     }
 
-    public static List<Location> getLocations(){return locations;}
-
-    public static void setLocations(){locations = null;}
+    /**
+     * Fonction qui sert à modifier la durée du suivi de localisation en millisecondes (voir ThirdFragment)
+     *
+     * @param timeNew
+     */
+    public static void setTime(
+            long timeNew) {
+        time = (long) timeNew;
+    }
 }
